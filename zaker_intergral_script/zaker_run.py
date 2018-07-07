@@ -57,7 +57,7 @@ news_point_list = [news1, news2, news3, news4, news5, news6]
 # 具体的访问次数指标
 news_time = 150
 comment_time = 150
-share_time = 15
+share_time = 0
 # 当前的访问次数
 curr_news_time = 0
 curr_comment_time = 0
@@ -78,6 +78,17 @@ def click_by_resid_condition(condition, click=True, settext=False, text=''):
         else:
             phone(resourceId=condition).set_text(text)
         time.sleep(1)
+
+
+def resid_and_inst(resid, inst=0, click=True, gettext=False):
+    if click:
+        if phone(resourceId=resid, instance=inst).wait(timeout=5):
+            phone(resourceId=resid, instance=inst).click()
+    elif gettext:
+        if phone(resourceId=resid, instance=inst).wait(timeout=5):
+            return phone(resourceId=resid, instance=inst).get_text()
+        else:
+            return None
 
 
 def operation_screen(point1, point2, swipetime=0.1):
@@ -114,11 +125,12 @@ def get_random_comment():
     :return:
     """
     # 总评论数
-    comment_count = '0'
-    if phone(resourceId='com.myzaker.ZAKER_Phone:id/comment_menu_item_tv').wait(timeout=5):
-        comment_count = phone(resourceId='com.myzaker.ZAKER_Phone:id/comment_menu_item_tv').get_text()
+    comment_count = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_menu_item_tv', click=False, gettext=True)
     # 如果总的评论数是None或者不超过8条，则返回None，不做评论，因为评论太少了不好做样本抽取
-    if comment_count is None or int(comment_count) < 8:
+    if comment_count is None:
+        print('获取新闻评论出错')
+        return None
+    if int(comment_count) < 8:
         print('当前新闻评论人数过少，不参加评论')
         return None
 
@@ -135,17 +147,14 @@ def get_random_comment():
             random_news_index = random.randint(1, curr_screen_comment_count)
             print('抽取当前屏幕的第' + str(random_news_index + 1) + '条评论')
             time.sleep(1)
-            comment_add = ''
-            if phone(resourceId='com.myzaker.ZAKER_Phone:id/comment_content_tv', instance=random_news_index).wait(
-                    timeout=2):
-                comment_add = phone(resourceId='com.myzaker.ZAKER_Phone:id/comment_content_tv',
-                                    instance=random_news_index).get_text()
-            else:
-                if phone(resourceId='com.myzaker.ZAKER_Phone:id/comment_content_tv',
-                         instance=random_news_index - 1).wait(timeout=1):
-                    comment_add = phone(resourceId='com.myzaker.ZAKER_Phone:id/comment_content_tv',
-                                        instance=random_news_index - 1).get_text()
-            if comment_add is not None or comment_add != '':
+            comment_add = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_content_tv',
+                                         inst=random_news_index, click=False, gettext=True)
+
+            if comment_add is None:
+                comment_add = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_content_tv',
+                                             inst=random_news_index - 2, click=False, gettext=True)
+
+            if comment_add is not None and comment_add != '':
                 random_comment_list.append(comment_add)
                 print("append: " + comment_add)
 
@@ -238,7 +247,7 @@ def swipe_down():
     上划操作
     :return:
     """
-    operation_screen((0.506, 0.841), (0.506, 0.211), swipetime=0.3)
+    operation_screen((0.506, 0.904), (0.506, 0.111), swipetime=0.3)
     time.sleep(1)
 
 
@@ -277,7 +286,7 @@ def main():
         time.sleep(1)
 
         # 如果此时显示的界面不是 具体的一条新闻，则点击返回键
-        if phone(resourceId="com.myzaker.ZAKER_Phone:id/autoloopswitch_shade_id").wait(exists=False, timeout=5) and \
+        if phone(resourceId="com.myzaker.ZAKER_Phone:id/autoloopswitch_shade_id").wait(exists=False, timeout=5) or \
                 phone(resourceId='com.myzaker.ZAKER_Phone:id/webview_title_text').wait(exists=False, timeout=5):
             pass
         else:
@@ -295,6 +304,8 @@ def main():
             curr_news_time += 1
             # 这里做一段长时间的等待，防止被ZAKER网站后台认定为恶意评论并封号
             time.sleep(random.randint(5, 8))
+            # 向下滑动屏幕
+            swipe_down()
             # 评论、分享
             comment()
             share()
@@ -312,9 +323,12 @@ def main():
 
 if __name__ == '__main__':
     # 启动app
-    # phone = u2.connect('192.168.1.101')
-    # print(phone.info)
-    # phone.app_start('com.myzaker.ZAKER_Phone')
-    # comment()
-    main()
+    # main()
+    phone = u2.connect('192.168.1.101')
+    print(phone.info)
+    phone.app_start('com.myzaker.ZAKER_Phone')
+    comment()
+    # swipe_down()
+    # 点击具体的频道
+    # resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/box_cell_icon', inst=0)
     print('done!!!')
