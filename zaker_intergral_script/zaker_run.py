@@ -188,7 +188,7 @@ def comment():
     # 返回None，不做评论，因为评论太少了不好做样本抽取
     text = get_random_comment()
     if text is None:
-        print('获取随机评论失败！None')
+        print('获取随机评论失败！')
         return
     # 点击评论编辑框
     click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_reply_content_et_2')
@@ -312,9 +312,9 @@ def main():
 
 if __name__ == '__main__':
     # 启动app
-    phone = u2.connect('192.168.1.101')
-    print(phone.info)
-    phone.app_start('com.myzaker.ZAKER_Phone')
-    comment()
-    # main()
+    # phone = u2.connect('192.168.1.101')
+    # print(phone.info)
+    # phone.app_start('com.myzaker.ZAKER_Phone')
+    # comment()
+    main()
     print('done!!!')
