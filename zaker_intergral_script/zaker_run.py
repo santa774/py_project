@@ -86,7 +86,10 @@ def resid_and_inst(resid, inst=0, click=True, gettext=False):
             phone(resourceId=resid, instance=inst).click()
     elif gettext:
         if phone(resourceId=resid, instance=inst).wait(timeout=5):
-            return phone(resourceId=resid, instance=inst).get_text()
+            if inst == 0:
+                return phone(resourceId=resid).get_text()
+            else:
+                return phone(resourceId=resid, instance=inst).get_text()
         else:
             return None
 
@@ -110,7 +113,6 @@ def get_screen_comment_count():
     向下滚动屏幕，并返回当前屏幕的评论数
     :return:
     """
-    swipe_down()
     curr_screen_comment_count = phone(className="android.widget.ListView",
                                       resourceId='com.myzaker.ZAKER_Phone:id/article_content_lv') \
         .child(resourceId="com.myzaker.ZAKER_Phone:id/comment_itemv").count
@@ -127,7 +129,7 @@ def get_random_comment():
     # 总评论数
     comment_count = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_menu_item_tv', click=False, gettext=True)
     # 如果总的评论数是None或者不超过8条，则返回None，不做评论，因为评论太少了不好做样本抽取
-    if comment_count is None:
+    if comment_count is None or comment_count == '':
         print('获取新闻评论出错')
         return None
     if int(comment_count) < 8:
@@ -140,12 +142,16 @@ def get_random_comment():
     random_comment_list = []
 
     # 随机滑动几页，然后随机抽取当前屏幕的评论列表中的其中一条评论
-    for swipe in range(1, random.randint(1, int(int(comment_count) / 5))):
+    swipe_times = int(int(comment_count) / 5)
+    if swipe_times > 7:
+        swipe_times = 7
+    for swipe in range(1, random.randint(1, swipe_times)):
+        swipe_down()
         curr_screen_comment_count = get_screen_comment_count()
         # 因为如果碰见撕逼的评论，通常都会一个屏幕只会显示那一条评论，所以要忽略
         if curr_screen_comment_count >= 3:
             random_news_index = random.randint(1, curr_screen_comment_count)
-            print('抽取当前屏幕的第' + str(random_news_index + 1) + '条评论')
+            print('当前屏幕有评论：的第' + str(random_news_index + 1) + '条评论')
             time.sleep(1)
             comment_add = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_content_tv',
                                          inst=random_news_index, click=False, gettext=True)
@@ -193,7 +199,7 @@ def comment():
         # 递归调用，网络总不会一直很慢的。。。
         comment()
     # 点击跳转到评论的按钮
-    click_by_resid_condition('com.myzaker.ZAKER_Phone:id/action_comments')
+    click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_menu_item_tv')
     # 返回None，不做评论，因为评论太少了不好做样本抽取
     text = get_random_comment()
     if text is None:
@@ -247,7 +253,7 @@ def swipe_down():
     上划操作
     :return:
     """
-    operation_screen((0.506, 0.904), (0.506, 0.111), swipetime=0.3)
+    operation_screen((0.506, 0.892), (0.506, 0.121), swipetime=0.3)
     time.sleep(1)
 
 
@@ -263,7 +269,7 @@ def swipe_up():
 def main():
     global curr_news_time, phone
     # 启动app
-    phone = u2.connect('192.168.1.101')
+    phone = u2.connect('192.168.1.103')
     print(phone.info)
     phone.app_start('com.myzaker.ZAKER_Phone')
     channel_size = len(channel_list_title)
@@ -310,7 +316,7 @@ def main():
             comment()
             share()
             # 点击跳转到评论的按钮 返回新闻顶部
-            click_by_resid_condition('com.myzaker.ZAKER_Phone:id/action_comments')
+            click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_menu_item_tv')
 
             print("当前阅读新闻：" + str(curr_news_time) + ", 当前评论新闻：" + str(curr_comment_time) + ", 当前分享新闻：" + str(
                 curr_share_time))
@@ -323,12 +329,10 @@ def main():
 
 if __name__ == '__main__':
     # 启动app
-    # main()
-    phone = u2.connect('192.168.1.101')
-    print(phone.info)
-    phone.app_start('com.myzaker.ZAKER_Phone')
-    comment()
+    main()
+    # phone = u2.connect('192.168.1.103')
+    # print(phone.info)
+    # phone.app_start('com.myzaker.ZAKER_Phone')
+    # comment()
     # swipe_down()
-    # 点击具体的频道
-    # resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/box_cell_icon', inst=0)
     print('done!!!')
