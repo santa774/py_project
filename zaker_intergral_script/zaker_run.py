@@ -116,6 +116,7 @@ def get_screen_comment_count():
     curr_screen_comment_count = phone(className="android.widget.ListView",
                                       resourceId='com.myzaker.ZAKER_Phone:id/article_content_lv') \
         .child(resourceId="com.myzaker.ZAKER_Phone:id/comment_itemv").count
+    print('当前屏幕有' + str(curr_screen_comment_count) + '条评论')
     return curr_screen_comment_count
 
 
@@ -150,15 +151,13 @@ def get_random_comment():
         curr_screen_comment_count = get_screen_comment_count()
         # 因为如果碰见撕逼的评论，通常都会一个屏幕只会显示那一条评论，所以要忽略
         if curr_screen_comment_count >= 3:
-            random_news_index = random.randint(1, curr_screen_comment_count)
-            print('当前屏幕有评论：的第' + str(random_news_index + 1) + '条评论')
             time.sleep(1)
             comment_add = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_content_tv',
-                                         inst=random_news_index, click=False, gettext=True)
+                                         inst=1, click=False, gettext=True)
 
             if comment_add is None:
                 comment_add = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_content_tv',
-                                             inst=random_news_index - 2, click=False, gettext=True)
+                                             inst=0, click=False, gettext=True)
 
             if comment_add is not None and comment_add != '':
                 random_comment_list.append(comment_add)
@@ -269,7 +268,7 @@ def swipe_up():
 def main():
     global curr_news_time, phone
     # 启动app
-    phone = u2.connect('192.168.1.103')
+    phone = u2.connect('192.168.1.100')
     print(phone.info)
     phone.app_start('com.myzaker.ZAKER_Phone')
     channel_size = len(channel_list_title)
@@ -330,9 +329,9 @@ def main():
 if __name__ == '__main__':
     # 启动app
     main()
-    # phone = u2.connect('192.168.1.103')
+    # phone = u2.connect('192.168.1.100')
     # print(phone.info)
     # phone.app_start('com.myzaker.ZAKER_Phone')
     # comment()
-    # swipe_down()
+
     print('done!!!')
