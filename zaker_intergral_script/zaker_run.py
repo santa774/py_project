@@ -4,6 +4,8 @@ import os
 import time
 import random
 import uiautomator2 as u2
+from PIL import Image
+from aip import AipOcr
 
 """
 订阅频道的屏幕坐标（x,y）：
@@ -28,7 +30,7 @@ banner: (513, 555)
 根据ZAKER的每日任务来看，需要完成看新闻100条，发送评论100条，分享文章10条，
 为了提高容错率，在原有的数量上加0.5倍的访问量，即：新闻150，评论150，分享15
 
-具体操作流程(每一步执行完都要等待一定的时间，防止网络差等情况)：
+具体操作流程(每一步执行完都要等待一定的时   间，防止网络差等情况)：
 1.点击具体的频道
 2.点击具体的新闻
     循环执行以下操作：
@@ -57,13 +59,14 @@ news_point_list = [news1, news2, news3, news4, news5, news6]
 # 具体的访问次数指标
 news_time = 150
 comment_time = 150
-share_time = 0
+share_time = 10
 # 当前的访问次数
 curr_news_time = 0
 curr_comment_time = 0
 curr_share_time = 0
 
-channel_list_title = ['科技频道', '娱乐八卦', '体育频道', '头条新闻', '今日看点', '深圳热点']
+channel_list_title = ['科技频道', '娱乐八卦', '汽车频道', '头条新闻', '今日看点', '深圳热点']
+comment_list = ['趁人少占个位', '挤一挤', '。。。。']
 
 
 def click_by_text_condition(condition, type_text=True):
@@ -128,11 +131,11 @@ def get_random_comment():
     :return:
     """
     # 总评论数
-    comment_count = resid_and_inst(resid='com.myzaker.ZAKER_Phone:id/comment_menu_item_tv', click=False, gettext=True)
+    comment_count = get_comment_count()
     # 如果总的评论数是None或者不超过8条，则返回None，不做评论，因为评论太少了不好做样本抽取
     if comment_count is None or comment_count == '':
         print('获取新闻评论出错')
-        return None
+        return comment_list[random.randint(1, len(comment_list) - 1)]
     if int(comment_count) < 8:
         print('当前新闻评论人数过少，不参加评论')
         return None
@@ -207,7 +210,8 @@ def comment():
     # 点击评论编辑框
     click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_reply_content_et_2')
     # 编辑框输入文字
-    click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_reply_content_et', click=False, settext=True, text=text)
+    click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_reply_content_et', click=False, settext=True,
+                             text=text)
     # 点击发送评论
     click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_reply_iv')
     # 评论+1
@@ -224,16 +228,19 @@ def share():
         # 点击分享按钮
         click_by_resid_condition('com.myzaker.ZAKER_Phone:id/action_shares')
         # 点击分享到微信
-        click_by_resid_condition('com.myzaker.ZAKER_Phone:id/share_wechat')
+        click_by_resid_condition('com.myzaker.ZAKER_Phone:id/share_tecent_qq')
         # 第一次调起微信分享的时间可能比较久，所以等待一下
         if curr_share_time == 0:
             time.sleep(2)
         # 点击分享到微信的第一个好友
-        click_by_resid_condition('com.tencent.mm:id/lp')
+        click_by_text_condition('Louis')
+        # click_by_resid_condition('com.tencent.mm:id/lp')
         # 点击分享
-        click_by_resid_condition('com.tencent.mm:id/an3')
+        click_by_resid_condition(condition='com.tencent.mobileqq:id/dialogRightBtn', text='发送')
+        # click_by_resid_condition('com.tencent.mm:id/an3')
         # 点击返回ZAKER
-        click_by_resid_condition('com.tencent.mm:id/an2')
+        click_by_resid_condition(condition='com.tencent.mobileqq:id/dialogLeftBtn')
+        # click_by_resid_condition('com.tencent.mm:id/an2')
         # 分享+1
         curr_share_time += 1
 
@@ -268,14 +275,14 @@ def swipe_up():
 def main():
     global curr_news_time, phone
     # 启动app
-    phone = u2.connect('192.168.1.100')
+    phone = u2.connect('192.168.31.15')
     print(phone.info)
     phone.app_start('com.myzaker.ZAKER_Phone')
     channel_size = len(channel_list_title)
     channel_list_title_cache = channel_list_title
 
     # 每次切换频道阅读新闻的时候都做判断 是否已经达到任务数
-    while curr_news_time <= news_time and curr_comment_time <= comment_time and curr_share_time <= share_time:
+    while curr_news_time <= news_time and curr_share_time <= share_time:
         channel = ''
         if channel_list_title is None or len(channel_list_title) == 0:
             channel = channel_list_title_cache.pop(random.randint(0, len(channel_list_title) - 1))
@@ -291,10 +298,11 @@ def main():
         time.sleep(1)
 
         # 如果此时显示的界面不是 具体的一条新闻，则点击返回键
-        if phone(resourceId="com.myzaker.ZAKER_Phone:id/autoloopswitch_shade_id").wait(exists=False, timeout=5) or \
-                phone(resourceId='com.myzaker.ZAKER_Phone:id/webview_title_text').wait(exists=False, timeout=5):
-            pass
+        if phone(resourceId="com.myzaker.ZAKER_Phone:id/action_comments").wait(timeout=2) \
+                and phone(resourceId="com.myzaker.ZAKER_Phone:id/webview_top_title").wait(exists=False, timeout=2):
+            print('正常新闻')
         else:
+            print('不是新闻')
             # 一个频道的新闻列表页面不会有2个非正常的新闻页面，所以这里只做二次容错处理
             go_back()
             temp_list = news_point_list
@@ -311,9 +319,10 @@ def main():
             time.sleep(random.randint(5, 8))
             # 向下滑动屏幕
             swipe_down()
+            swipe_down()
             # 评论、分享
             comment()
-            share()
+            # share()
             # 点击跳转到评论的按钮 返回新闻顶部
             click_by_resid_condition('com.myzaker.ZAKER_Phone:id/comment_menu_item_tv')
 
@@ -326,12 +335,47 @@ def main():
         go_back()
 
 
+def get_file_content(filePath):
+    """ 读取图片 """
+    with open(filePath, 'rb') as fp:
+        return fp.read()
+
+
+def get_comment_count():
+    """ 百度识别文字"""
+    APP_ID = '15056581'
+    API_KEY = 'FRLNDYpV6oSoWWup0C3bj4IF'
+    SECRET_KEY = '4YrPaLLHnjZocDjxBAniKwmuinSyx38r'
+    client = AipOcr(APP_ID, API_KEY, SECRET_KEY)
+
+    """
+    获取手机实时截图
+    :return:
+    """
+    os.system('adb shell screencap -p /sdcard/news_comment.png')
+    os.system('adb pull /sdcard/news_comment.png')
+    image = Image.open("news_comment.png", "r")
+    box = (648, 120, 715, 155)
+    # box = (22, 274, 1018, 633)
+    crop_image = image.crop(box)
+    crop_image.save("news_comment_count.png", 'png')
+
+    img = get_file_content("news_comment_count.png")
+    result = client.basicGeneral(img)
+    if len(result['words_result']) == 0:
+        return None
+    else:
+        print("总评论数为：" + result['words_result'][0]['words'])
+        return result['words_result'][0]['words']
+
+
 if __name__ == '__main__':
     # 启动app
     main()
-    # phone = u2.connect('192.168.1.100')
+    # phone = u2.connect('192.168.31.15')
     # print(phone.info)
     # phone.app_start('com.myzaker.ZAKER_Phone')
+    # get_comment_count()
     # comment()
 
     print('done!!!')
